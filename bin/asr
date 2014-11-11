@@ -13,7 +13,8 @@ from ysc.audio import record
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-k", "--keyfile", type=argparse.FileType("r"),
-                        default=".keyfile", help="file with key [%(default)s]")
+                        default=os.path.expanduser("~/.ysckey"),
+                        help="file with key [%(default)s]")
     parser.add_argument("-i", "--input", type=argparse.FileType("rb"),
                         help="input wav file")
     parser.add_argument("-t", "--topic",
@@ -39,7 +40,7 @@ def get_params(args):
 def get_streams(args):
     if not args.input:
         if not os.isatty(sys.stdin.fileno()):
-            inputstream = sys.stdin
+            inputstream = sys.stdin.buffer
         else:
             inputstream = record()
     else:
@@ -60,6 +61,6 @@ def main(args):
 if __name__ == '__main__':
     logging.basicConfig(
         level="INFO",
-        format="%(asctime)s: %(levelname)-7s: %(name)s: %(message)s")
+        format="%(asctime)s: %(levelname)s: %(name)s: %(message)s")
     args = parse_args()
     main(args)

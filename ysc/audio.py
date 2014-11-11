@@ -41,13 +41,17 @@ def record():
     stream.stop_stream()
     stream.close()
 
-    logger.info("record: buffer size: %s", len(buffer.getvalue()))
+    logger.debug("record: buffer size: %s", len(buffer.getvalue()))
     buffer.seek(0)
     return buffer
 
 
 def play(outputstream):
     wf = wave.open(outputstream, 'rb')
+
+    logger.debug("play: framerate: %s", wf.getframerate())
+    logger.debug("play: sampwidth: %s", wf.getsampwidth())
+    logger.debug("play: channels: %s", wf.getnchannels())
 
     pa = pyaudio.PyAudio()
     et = threading.Event()
