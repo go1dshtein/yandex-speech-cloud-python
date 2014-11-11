@@ -1,0 +1,65 @@
+#!/usr/bin/env python3
+import os
+import sys
+import uuid
+import logging
+import asyncio
+import argparse
+
+from ysc.asr import asr
+from ysc.audio import record
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-k", "--keyfile", type=argparse.FileType("r"),
+                        default=".keyfile", help="file with key [%(default)s]")
+    parser.add_argument("-i", "--input", type=argparse.FileType("rb"),
+                        help="input wav file")
+    parser.add_argument("-t", "--topic",
+                        choices=("music", "maps", "notes", "queries"),
+                        help="asr topic [%(default)s]", default="notes")
+    parser.add_argument("-u", "--uuid", default=uuid.uuid4().hex,
+                        help="user uuid")
+    return parser.parse_args()
+
+
+def get_key(keyfile):
+    return keyfile.read().strip()
+
+
+def get_params(args):
+    params = {}
+    params["uuid"] = args.uuid
+    params["topic"] = args.topic
+    params["key"] = get_key(args.keyfile)
+    return params
+
+
+def get_streams(args):
+    if not args.input:
+        if not os.isatty(sys.stdin.fileno()):
+            inputstream = sys.stdin
+        else:
+            inputstream = record()
+    else:
+        inputstream = args.input
+    outputstream = sys.stdout
+    return inputstream, outputstream
+
+
+def main(args):
+    inputstream, outputstream = get_streams(args)
+    params = get_params(args)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asr(loop, inputstream, outputstream, params))
+    loop.close()
+
+
+if __name__ == '__main__':
+    logging.basicConfig(
+        level="INFO",
+        format="%(asctime)s: %(levelname)-7s: %(name)s: %(message)s")
+    args = parse_args()
+    main(args)

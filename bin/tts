@@ -1,0 +1,84 @@
+#!/usr/bin/env python3
+import os
+import io
+import sys
+import logging
+import asyncio
+import argparse
+
+from ysc.tts import tts
+from ysc.audio import play
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-k", "--keyfile", type=argparse.FileType("r"),
+                        default=".keyfile", help="file with key [%(default)s]")
+    parser.add_argument("-o", "--output", type=argparse.FileType("wb"),
+                        help="output wav file")
+    parser.add_argument("-s", "--speaker", choices=("jane", "zahar"),
+                        default="jane", help="speaker [%(default)s]")
+    parser.add_argument("-e", "--emotion",
+                        choices=("good", "evil", "mixed", "neutral"),
+                        default="good", help="emotion [%(default)s]")
+    parser.add_argument("-d", "--drunk", action="store_true",
+                        help="drunk voice")
+    parser.add_argument("-i", "--ill", action="store_true",
+                        help="ill voice")
+    parser.add_argument("-r", "--robot", action="store_true",
+                        help="robot voice")
+
+    return parser.parse_args()
+
+
+def get_key(keyfile):
+    return keyfile.read().strip()
+
+
+def get_params(args):
+    params = {}
+    params["key"] = get_key(args.keyfile)
+    params["speaker"] = args.speaker
+    params["emotion"] = args.emotion
+    if args.drunk:
+        params["drunk"] = "true"
+    if args.ill:
+        params["ill"] = "true"
+    if args.robot:
+        params["robot"] = "true"
+    params["format"] = "wav"
+    return params
+
+
+def get_streams(args):
+    playit = False
+    if not args.output:
+        if not os.isatty(sys.stdout.fileno()):
+            outputstream = sys.stdout
+        else:
+            outputstream = io.BytesIO()
+            playit = True
+    else:
+        outputstream = args.output
+    inputstream = sys.stdin
+    return inputstream, outputstream, playit
+
+
+def main(args):
+    inputstream, outputstream, playit = get_streams(args)
+    params = get_params(args)
+
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(tts(loop, inputstream, outputstream, params))
+    loop.close()
+    if playit:
+        outputstream.seek(0)
+        play(outputstream)
+
+
+if __name__ == '__main__':
+    logging.basicConfig(
+        level="INFO",
+        format="%(asctime)s: %(levelname)-7s: %(name)s: %(message)s")
+    args = parse_args()
+    main(args)
